@@ -29,17 +29,12 @@ jobs:
         pip install -r Auditor/requirements.txt
         pip install python-dotenv langfuse
 
-    - name: Fetch Daily 100 Calls from Kibana / Redash
+    - name: Fetch Daily Calls from Redash
       run: |
-        echo "Fetching data..."
-        # ----------------------------------------------------------------------------------
-        # TODO: Add your Python script or curl command here to fetch data from Redash
-        # Make sure it saves the CSV file to: csv_batch_tool/input/daily_input.csv
-        # ----------------------------------------------------------------------------------
-        
-        # Fallback (creates empty file so workflow doesn't crash if you haven't added script yet)
-        mkdir -p csv_batch_tool/input/
-        touch csv_batch_tool/input/daily_input.csv
+        pip install pandas requests
+        python fetch_redash.py
+      env:
+        REDASH_API_KEY: ${{ secrets.REDASH_API_KEY }}
 
     - name: Run Extraction
       run: |
