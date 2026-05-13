@@ -29,6 +29,16 @@ jobs:
         pip install -r Auditor/requirements.txt
         pip install python-dotenv langfuse
 
+    - name: Fetch Daily Calls from Kibana
+      run: |
+        echo "Fetching Kibana URLs..."
+        # ----------------------------------------------------------------------------------
+        # TODO: Add your script here to fetch audio URLs from Kibana
+        # Save the file to: csv_batch_tool/input/Untitled discover search.csv
+        # ----------------------------------------------------------------------------------
+        mkdir -p csv_batch_tool/input/
+        touch "csv_batch_tool/input/Untitled discover search.csv"
+
     - name: Fetch Daily Calls from Redash
       run: |
         pip install pandas requests
@@ -38,7 +48,7 @@ jobs:
 
     - name: Run Extraction
       run: |
-        python run_pipeline.py --step extract
+        python run_pipeline.py --step extract --flash-json-csv csv_batch_tool/input/daily_redash.csv
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         LANGFUSE_PUBLIC_KEY: ${{ secrets.EXTRACT_LANGFUSE_PUBLIC_KEY }}

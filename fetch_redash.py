@@ -58,7 +58,7 @@ def fetch_data():
     os.makedirs(output_dir, exist_ok=True)
     
     # Save to CSV
-    output_path = os.path.join(output_dir, "daily_input.csv")
+    output_path = os.path.join(output_dir, "daily_redash.csv")
     df.to_csv(output_path, index=False)
     print(f"Saved data to {output_path}")
 
