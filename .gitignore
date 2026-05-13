@@ -1,0 +1,13 @@
+# Ignore Environment Variables (API Keys)
+.env
+Auditor/.env
+csv_batch_tool/.env
+
+# Ignore Large Datasets & Outputs
+csv_batch_tool/merged_mcats_dropped_noname.csv
+csv_batch_tool/extraction_output_30-04/
+Auditor/audit_outputs/
+csv_batch_tool/input/
+*.csv
+!pipeline_config.json
+!prompts_config.json

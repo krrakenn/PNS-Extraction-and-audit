@@ -1,0 +1,8 @@
+openai
+python-dotenv
+httpx
+httpcore
+langfuse
+pydantic
+gspread
+google-auth

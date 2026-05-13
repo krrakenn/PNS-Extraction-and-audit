@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PNS Audit Pipeline Flowchart</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f1117;
+            --card: #1a1d27;
+            --border: #2a2d3a;
+            --text: #e4e4e7;
+            --muted: #9ca3af;
+            --accent: #818cf8;
+            --accent2: #34d399;
+            --accent3: #f59e0b;
+            --accent4: #f472b6;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .header {
+            text-align: center;
+            padding: 40px 20px 20px;
+            background: linear-gradient(180deg, rgba(129,140,248,0.08) 0%, transparent 100%);
+        }
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #818cf8, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .header p { color: var(--muted); font-size: 0.95rem; }
+
+        .chart-container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 30px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow-x: auto;
+        }
+
+        .details-grid {
+            max-width: 1200px;
+            margin: 30px auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 0 20px 60px;
+        }
+        .detail-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 24px;
+            transition: border-color 0.2s;
+        }
+        .detail-card:hover { border-color: var(--accent); }
+
+        .detail-card .step-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+        .step-1 .step-badge { background: rgba(129,140,248,0.15); color: #818cf8; }
+        .step-2 .step-badge { background: rgba(52,211,153,0.15); color: #34d399; }
+        .step-3 .step-badge { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .step-4 .step-badge { background: rgba(244,114,182,0.15); color: #f472b6; }
+        .step-5 .step-badge { background: rgba(96,165,250,0.15); color: #60a5fa; }
+
+        .detail-card h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+        .detail-card code {
+            background: rgba(129,140,248,0.1);
+            color: var(--accent);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.82rem;
+        }
+        .io-row {
+            display: flex;
+            gap: 8px;
+            margin: 6px 0;
+            font-size: 0.88rem;
+            line-height: 1.5;
+        }
+        .io-label {
+            font-weight: 600;
+            min-width: 65px;
+            flex-shrink: 0;
+        }
+        .io-label.input { color: #60a5fa; }
+        .io-label.output { color: #34d399; }
+        .io-label.prompt { color: #f59e0b; }
+        .io-value { color: var(--muted); }
+
+        .prompt-block {
+            margin-top: 10px;
+            padding: 12px;
+            background: rgba(245,158,11,0.06);
+            border: 1px solid rgba(245,158,11,0.15);
+            border-radius: 8px;
+            font-size: 0.82rem;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+        .prompt-block strong { color: var(--accent3); }
+        .no-prompt { color: var(--muted); font-style: italic; font-size: 0.85rem; margin-top: 8px; }
+
+        .full-width { grid-column: 1 / -1; }
+
+        @media (max-width: 800px) {
+            .details-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>PNS Audit — Pipeline Flowchart</h1>
+    <p>Complete I/O, prompts, and data flow across all scripts</p>
+</div>
+
+<div class="chart-container">
+    <pre class="mermaid">
+flowchart TD
+    classDef inputFile fill:#1e293b,stroke:#60a5fa,stroke-width:2px,color:#e2e8f0
+    classDef script fill:#312e81,stroke:#818cf8,stroke-width:2px,color:#e0e7ff
+    classDef output fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#d1fae5
+    classDef prompt fill:#78350f,stroke:#f59e0b,stroke-width:1px,color:#fef3c7
+
+    RAW[/"📄 Kibana Raw CSV\n(Untitled discover search.csv)"/]:::inputFile
+
+    KB["⚙️ kibana_toinput.go\n━━━━━━━━━━━━━━━━━━\nFilters & keeps selected columns"]:::script
+
+    FILTERED[/"📄 csv_batch_tool/input/\nfiltered_output_20-04.csv"/]:::output
+
+    MAIN["⚙️ csv_batch_tool/main.go\n━━━━━━━━━━━━━━━━━━\n• Fetches buyer/seller info via API\n• Downloads call audio\n• Sends audio + prompt to LLM\n• Writes extraction JSON"]:::script
+
+    PROMPT_EXT(["🔶 Prompt: Audio extraction\nExtracts buyer, seller, products,\npayment, moq, metadata from audio"]):::prompt
+
+    OUT_CSV1[/"📄 extraction_output/\nmodel_1/output.csv\n(Ground Truth)"/]:::output
+    OUT_CSV2[/"📄 extraction_output/\nmodel_2/output.csv\n(Flash)"/]:::output
+
+    AUDIT_FLAT["⚙️ 31-03_audit.py\n━━━━━━━━━━━━━━━━━━\nFlat Fields Audit Agent"]:::script
+
+    PROMPT_FLAT(["🔶 Prompt: FLAT FIELDS AUDIT AGENT\n4 steps: Field Discovery →\nValue Normalization → Synonym\nResolution → Verdicts\nSections: buyer, seller, payment,\nmetadata, moq, next_steps"]):::prompt
+
+    AUDIT_PROD["⚙️ 31-03_audit_products.py\n━━━━━━━━━━━━━━━━━━\nProducts Audit Agent"]:::script
+
+    PROMPT_PROD(["🔶 Prompt: PRODUCTS AUDIT AGENT\n5 steps: Product Alignment →\nName Attribute Extraction →\nValue Normalization → Spec Synonym\nResolution → Judging"]):::prompt
+
+    FLAT_OUT[/"📁 audit_outputs/\nwithout_products_.../\n• results.csv\n• U*/U*_audit.json\n• U*/prompt.txt"/]:::output
+
+    PROD_OUT[/"📁 audit_outputs/\naudit_outputs_.../\n• results.csv\n• U*/U*_audit.json\n• U*/prompt.txt\n• audit_checks.csv"/]:::output
+
+    COLLATE_FLAT["⚙️ collate_without_products_\naudit_json_to_csv.py\n━━━━━━━━━━━━━━━━━━\nFlattens JSON → CSV"]:::script
+
+    COLLATE_PROD["⚙️ collate_audit_checks.py\n(called from 31-03_audit_products)\n━━━━━━━━━━━━━━━━━━\nFlattens JSON → CSV"]:::script
+
+    FLAT_CSV[/"📄 audit_checks_collated.csv\n📄 usage_metadata_collated.csv"/]:::output
+    PROD_CSV[/"📄 audit_checks.csv"/]:::output
+
+    ANALYZE_FLAT["⚙️ analyze_without_products_\naudit_report.py"]:::script
+    ANALYZE_PROD["⚙️ analyze_audit_report.py"]:::script
+
+    REPORT_FLAT[/"📁 without_products_analysis_report/\n• audit_analysis_report.md\n• overall_verdict_distribution.csv\n• section_verdict_distribution.csv\n• field_verdict_distribution.csv"/]:::output
+
+    REPORT_PROD[/"📁 analysis_report/\n• audit_analysis_report.md\n• overall_verdict_distribution.csv\n• field_verdict_distribution.csv"/]:::output
+
+    RAW --> KB --> FILTERED --> MAIN
+    MAIN -.-> PROMPT_EXT
+    MAIN --> OUT_CSV1
+    MAIN --> OUT_CSV2
+
+    OUT_CSV1 --> AUDIT_FLAT
+    OUT_CSV2 --> AUDIT_FLAT
+    AUDIT_FLAT -.-> PROMPT_FLAT
+    AUDIT_FLAT --> FLAT_OUT
+
+    OUT_CSV1 --> AUDIT_PROD
+    OUT_CSV2 --> AUDIT_PROD
+    AUDIT_PROD -.-> PROMPT_PROD
+    AUDIT_PROD --> PROD_OUT
+
+    FLAT_OUT --> COLLATE_FLAT --> FLAT_CSV --> ANALYZE_FLAT --> REPORT_FLAT
+    PROD_OUT --> COLLATE_PROD --> PROD_CSV --> ANALYZE_PROD --> REPORT_PROD
+    </pre>
+</div>
+
+<!-- Detailed Script Cards -->
+<div class="details-grid">
+
+    <div class="detail-card step-1">
+        <span class="step-badge">Step 1 — Pre-Processing</span>
+        <h3><code>kibana_toinput.go</code></h3>
+        <div class="io-row"><span class="io-label input">Input:</span><span class="io-value">Raw Kibana CSV (e.g. <code>Untitled discover search.csv</code>)</span></div>
+        <div class="io-row"><span class="io-label output">Output:</span><span class="io-value"><code>csv_batch_tool/input/filtered_output_20-04.csv</code></span></div>
+        <p class="no-prompt">No LLM prompt — pure column filtering via CLI flags (<code>-input</code>, <code>-output</code>, <code>-keep</code>)</p>
+    </div>
+
+    <div class="detail-card step-2">
+        <span class="step-badge">Step 2 — LLM Extraction</span>
+        <h3><code>csv_batch_tool/main.go</code></h3>
+        <div class="io-row"><span class="io-label input">Input:</span><span class="io-value"><code>filtered_output_20-04.csv</code> (seller_id, buyer_id, recording_url)</span></div>
+        <div class="io-row"><span class="io-label output">Output:</span><span class="io-value"><code>extraction_output_.../&lt;model&gt;/&lt;timestamp&gt;/output.csv</code></span></div>
+        <div class="prompt-block">
+            <strong>Prompt (built in utils.go):</strong> Sends the call audio bytes along with user details (buyer name, city, seller name, city) and product category hierarchy to the LLM. Asks it to extract structured JSON covering: buyer_details, seller_details, payment, metadata, moq, next_steps, and products array with specs/prices.
+        </div>
+    </div>
+
+    <div class="detail-card step-3">
+        <span class="step-badge">Step 3a — Flat Fields Audit</span>
+        <h3><code>Auditor/31-03_audit.py</code></h3>
+        <div class="io-row"><span class="io-label input">Input:</span><span class="io-value">Two <code>output.csv</code> files (Model 1 = GT, Model 2 = Flash)</span></div>
+        <div class="io-row"><span class="io-label output">Output:</span><span class="io-value"><code>audit_outputs/without_products_.../results.csv</code> + per-URL <code>*_audit.json</code>, <code>prompt.txt</code>, <code>usage_metadata.json</code></span></div>
+        <div class="prompt-block">
+            <strong>Prompt: # FLAT FIELDS AUDIT AGENT</strong><br>
+            Audits ONLY: buyer_details, seller_details, payment, metadata, moq, next_steps.<br>
+            <strong>4-step pipeline:</strong><br>
+            1. Field Discovery — enumerate every key with real values<br>
+            2. Value Normalization — currency, ranges, lakh/crore, phone, dates, booleans<br>
+            3. Synonym Resolution — payment terms, delivery, identity, time synonyms<br>
+            4. Verdicts — MATCH / PARTIAL / MISMATCH / MISSING / HALLUCINATED
+        </div>
+    </div>
+
+    <div class="detail-card step-3">
+        <span class="step-badge">Step 3b — Products Audit</span>
+        <h3><code>Auditor/31-03_audit_products.py</code></h3>
+        <div class="io-row"><span class="io-label input">Input:</span><span class="io-value">Two <code>output.csv</code> files (extracts only <code>products</code> array from thinking_json)</span></div>
+        <div class="io-row"><span class="io-label output">Output:</span><span class="io-value"><code>audit_outputs/audit_outputs_.../results.csv</code> + per-URL <code>*_audit.json</code>, <code>audit_checks.csv</code></span></div>
+        <div class="prompt-block">
+            <strong>Prompt: # PRODUCTS AUDIT AGENT</strong><br>
+            Audits ONLY the products array.<br>
+            <strong>5-step pipeline:</strong><br>
+            1. Product Alignment — match GT products to Flash (split/merge detection)<br>
+            2. Name Attribute Extraction — material, brand, form, size tokens<br>
+            3. Value Normalization — units, currency, Hindi unit names, price equivalence<br>
+            4. Spec Name Synonym Resolution — thickness=gauge, packing=packaging, etc.<br>
+            5. Judging — MATCH / PARTIAL / MISMATCH / MISSING / HALLUCINATED
+        </div>
+    </div>
+
+    <div class="detail-card step-4">
+        <span class="step-badge">Step 4a — Flat Collation</span>
+        <h3><code>collate_without_products_audit_json_to_csv.py</code></h3>
+        <div class="io-row"><span class="io-label input">Input:</span><span class="io-value">Directory of <code>*_audit.json</code> files from flat fields audit</span></div>
+        <div class="io-row"><span class="io-label output">Output:</span><span class="io-value"><code>audit_checks_collated.csv</code> + <code>usage_metadata_collated.csv</code></span></div>
+        <p class="no-prompt">No LLM prompt — pure JSON-to-CSV flattening. Optional <code>--analyze</code> flag triggers analysis.</p>
+    </div>
+
+    <div class="detail-card step-4">
+        <span class="step-badge">Step 4b — Products Collation</span>
+        <h3><code>collate_audit_checks.py</code></h3>
+        <div class="io-row"><span class="io-label input">Input:</span><span class="io-value">Directory of <code>*_audit.json</code> files from products audit</span></div>
+        <div class="io-row"><span class="io-label output">Output:</span><span class="io-value"><code>audit_checks.csv</code></span></div>
+        <p class="no-prompt">No LLM prompt — called automatically at end of products audit run.</p>
+    </div>
+
+    <div class="detail-card step-5">
+        <span class="step-badge">Step 5a — Flat Analysis</span>
+        <h3><code>analyze_without_products_audit_report.py</code></h3>
+        <div class="io-row"><span class="io-label input">Input:</span><span class="io-value"><code>audit_checks_collated.csv</code></span></div>
+        <div class="io-row"><span class="io-label output">Output:</span><span class="io-value"><code>without_products_analysis_report/</code> — MD report + 3 distribution CSVs (overall, section, field)</span></div>
+        <p class="no-prompt">No LLM prompt — statistical analysis with match rates, per-section breakdowns, and field-level examples.</p>
+    </div>
+
+    <div class="detail-card step-5">
+        <span class="step-badge">Step 5b — Products Analysis</span>
+        <h3><code>analyze_audit_report.py</code></h3>
+        <div class="io-row"><span class="io-label input">Input:</span><span class="io-value"><code>audit_checks.csv</code> or a folder of <code>*_audit.json</code> files</span></div>
+        <div class="io-row"><span class="io-label output">Output:</span><span class="io-value"><code>analysis_report/</code> — MD report + 2 distribution CSVs (overall, field)</span></div>
+        <p class="no-prompt">No LLM prompt — statistical analysis with match rates, field-level verdict distributions, and examples.</p>
+    </div>
+
+</div>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'dark',
+        themeVariables: {
+            primaryColor: '#312e81',
+            primaryTextColor: '#e0e7ff',
+            primaryBorderColor: '#818cf8',
+            lineColor: '#6366f1',
+            secondaryColor: '#064e3b',
+            tertiaryColor: '#1e293b',
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '13px'
+        },
+        flowchart: {
+            curve: 'basis',
+            padding: 20,
+            nodeSpacing: 40,
+            rankSpacing: 60,
+            useMaxWidth: true
+        }
+    });
+</script>
+
+</body>
+</html>

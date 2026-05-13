@@ -1,0 +1,20 @@
+{
+  "_comment": "Central config for the PNS Audit pipeline. Edit this file to change paths, models, and settings.",
+
+  "input_csv": "Untitled discover search.csv",
+  "keep_columns": "RECEIVER_GLID,SENDER_GLID,RECORDING_URL,FILE_ID",
+
+  "pro_model": "google/gemini-2.5-pro",
+  "flash_model": "google/gemini-2.5-flash",
+  "audit_model": "google/gemini-2.5-pro",
+
+  "max_urls": 210,
+
+  "extraction_output_dir": "extraction_output_30-04",
+
+  "paths": {
+    "root":           ".",
+    "csv_batch_tool": "csv_batch_tool",
+    "auditor":        "Auditor"
+  }
+}
