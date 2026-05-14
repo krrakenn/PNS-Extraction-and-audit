@@ -63,109 +63,67 @@ def normalize_json(raw_json: str) -> str:
         return raw_json
 
 def main():
-    parser = argparse.ArgumentParser(description="Import provided Flash data and join with source CSV.")
-    parser.add_argument("--flash-json-csv", required=True, help="Path to CSV with 'file id' and 'llm extracted json'")
-    parser.add_argument("--source-csv", required=True, help="Path to original Kibana/Source CSV (with RECEIVER_GLID, etc.)")
-    parser.add_argument("--output-csv", required=True, help="Where to save the standardized flash output.csv")
+    parser = argparse.ArgumentParser(description="Import and normalize Redash JSON data for PNS Auditor.")
+    parser.add_argument("--source-csv", required=True, help="Path to the Redash CSV (daily_input.csv)")
+    parser.add_argument("--output-csv", required=True, help="Path to output standardized CSV")
     args = parser.parse_args()
 
-    # 1. Load source data (indexed by FILE_ID)
-    source_data = {}
-    print(f"Reading source metadata from: {args.source_csv}")
-    with open(args.source_csv, encoding="utf-8-sig") as f: # Use utf-8-sig for potential BOM
-        reader = csv.DictReader(f)
-        headers = [h.strip() for h in (reader.fieldnames or [])]
-        print(f"Source headers found: {headers}")
-        for row in reader:
-            # Try various case versions of FILE_ID
-            fid = None
-            for k in row.keys():
-                if k and k.strip().upper() == "FILE_ID":
-                    fid = row[k]
-                    break
-            
-            if fid:
-                source_data[str(fid).strip()] = row
-    
-    print(f"Loaded {len(source_data)} rows of metadata. Sample IDs: {list(source_data.keys())[:5]}")
+    source_path = Path(args.source_csv)
+    if not source_path.exists():
+        print(f"Error: Source CSV not found at {source_path}")
+        sys.exit(1)
 
-    # 2. Load and process Flash JSONs
     standardized_rows = []
-    print(f"Reading Flash JSONs from: {args.flash_json_csv}")
-    with open(args.flash_json_csv, encoding="utf-8-sig") as f:
-        content = f.read()
-        first_line = content.split('\n')[0]
-        delimiter = ',' if ',' in first_line else '\t'
-        print(f"Detected delimiter: {repr(delimiter)} for first line: {repr(first_line)}")
-        
-        f.seek(0)
-        reader = csv.DictReader(f, delimiter=delimiter)
-        # Clean up headers
-        reader.fieldnames = [fn.strip().lower() for fn in (reader.fieldnames or [])]
-        print(f"Flash headers found: {reader.fieldnames}")
-        
+    
+    with open(source_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
         for i, row in enumerate(reader):
-            fid = (row.get("file id") or row.get("file_id") or "").strip()
-            raw_json = (
-                row.get("llm extracted json") or 
-                row.get("llm_extracted_json") or 
-                row.get("json_output") or 
-                row.get("json") or 
-                ""
-            )
+            # Normalize keys to be case insensitive
+            row_keys = {k.lower(): k for k in row.keys() if k}
             
-            if not fid:
+            # Extract fields safely
+            file_id = row.get(row_keys.get("file_id", ""), "")
+            llm_json = row.get(row_keys.get("llm_extracted_json", ""), "")
+            file_url = row.get(row_keys.get("file_url", ""), row.get(row_keys.get("recording_url", ""), ""))
+            seller_glid = row.get(row_keys.get("seller_glid", ""), row.get(row_keys.get("receiver_glid", ""), ""))
+            buyer_glid = row.get(row_keys.get("buyer_glid", ""), row.get(row_keys.get("sender_glid", ""), ""))
+            
+            if not file_id:
                 continue
                 
-            fid_str = str(fid).strip()
-            
-            if i < 3:
-                print(f"Checking Flash ID {repr(fid_str)}... JSON length: {len(raw_json)}")
-
-            if not raw_json:
-                if i < 3:
-                    print(f"  Warning: No JSON content found for ID {repr(fid_str)}")
-                continue
-
-            # NORMALIZE the JSON to match Pro structure
-            clean_json = normalize_json(raw_json)
-
-            source_info = source_data.get(fid_str)
-            if not source_info:
-                if i < 5:
-                    print(f"  Warning: No metadata found for ID {repr(fid_str)}")
-                continue
+            # Need to reference the normalize_json function which is still in the file
+            clean_json = normalize_json(llm_json) if llm_json else "{}"
             
             standardized_rows.append({
-                "seller id": source_info.get("RECEIVER_GLID", ""),
-                "Buyer id": source_info.get("SENDER_GLID", ""),
-                "recording_url": source_info.get("RECORDING_URL", ""),
-                "file id": fid_str,
-                "user details": source_info.get("USER_DETAILS", "{}"),
+                "seller id": seller_glid,
+                "Buyer id": buyer_glid,
+                "recording_url": file_url,
+                "file id": file_id,
+                "user details": "{}",
                 "mcat_id": "",
                 "mcat_name": "",
                 "categories": "[]",
                 "Thinking JSON": clean_json,
-                "Thinking summary": "Imported & Normalized Flash Data",
+                "Thinking summary": "Imported and Normalized Flash Data from Redash",
                 "Thinking Input Tokens": "0",
                 "Thinking Output Tokens": "0"
             })
 
-    # 3. Write standardized output
     if not standardized_rows:
         print("Error: No valid rows imported.")
         sys.exit(1)
 
-    # Ensure output directory exists
     output_path = Path(args.output_csv)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(args.output_csv, "w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=standardized_rows[0].keys())
         writer.writeheader()
-        writer.writerows(standardized_rows)
+        for row in standardized_rows:
+            writer.writerow(row)
 
-    print(f"✓ Imported {len(standardized_rows)} Flash rows to {args.output_csv}")
+    print(f"✓ Successfully imported and normalized {len(standardized_rows)} records from Redash CSV.")
+    print(f"  -> {args.output_csv}")
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
