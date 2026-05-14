@@ -189,6 +189,87 @@ def step_extract(cfg: dict, pro_model: str = None, flash_model: str = None, flas
     return pro_output_path, flash_output_path
 
 
+def step_clean_errors(pro_csv: Path, flash_csv: Path) -> tuple[Path, Path]:
+    """Remove rows that have ERROR in Thinking JSON from both Pro and Flash CSVs.
+    
+    Reads both CSVs, identifies file IDs with ERROR rows in the Pro output,
+    then drops those rows from both CSVs. Overwrites both files in-place.
+    Returns the same paths so they can be passed directly to step_audit.
+    """
+    import csv as _csv
+
+    banner("STEP 2c — Cleaning ERROR Rows")
+
+    def _read(path: Path):
+        with open(path, encoding="utf-8", newline="") as fh:
+            reader = _csv.DictReader(fh)
+            rows = list(reader)
+            fieldnames = reader.fieldnames or []
+        return rows, fieldnames
+
+    def _write(path: Path, rows: list, fieldnames: list):
+        with open(path, "w", encoding="utf-8", newline="") as fh:
+            writer = _csv.DictWriter(fh, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+
+    def _norm(col: str) -> str:
+        import re
+        return re.sub(r"[^a-z0-9]+", "", col.strip().lower())
+
+    def _find_col(fieldnames: list, candidates: list) -> str | None:
+        norm_map = {_norm(c): c for c in fieldnames}
+        for c in candidates:
+            if _norm(c) in norm_map:
+                return norm_map[_norm(c)]
+        return None
+
+    # ── Read Pro CSV ───────────────────────────────────────────────────────────
+    pro_rows, pro_fields = _read(pro_csv)
+    pro_json_col = _find_col(pro_fields, ["Thinking JSON", "thinking_json", "ThinkingJSON"])
+    pro_id_col   = _find_col(pro_fields, ["file id", "file_id", "FILE_ID", "fileid"])
+
+    if not pro_json_col or not pro_id_col:
+        log("WARNING: Could not detect Thinking JSON / file id columns in Pro CSV — skipping error cleanup.")
+        return pro_csv, flash_csv
+
+    # ── Find error file IDs ────────────────────────────────────────────────────
+    error_ids: set[str] = set()
+    for row in pro_rows:
+        thinking = (row.get(pro_json_col) or "").strip()
+        if thinking.upper().startswith("ERROR"):
+            fid = (row.get(pro_id_col) or "").strip()
+            if fid:
+                error_ids.add(fid)
+
+    if not error_ids:
+        log("✓ No ERROR rows found — both CSVs are clean.")
+        return pro_csv, flash_csv
+
+    log(f"Found {len(error_ids)} ERROR file ID(s): {sorted(error_ids)}")
+
+    # ── Clean Pro CSV ──────────────────────────────────────────────────────────
+    clean_pro = [r for r in pro_rows if (r.get(pro_id_col) or "").strip() not in error_ids]
+    dropped_pro = len(pro_rows) - len(clean_pro)
+    _write(pro_csv, clean_pro, pro_fields)
+    log(f"✓ Pro CSV  — removed {dropped_pro} row(s) → {pro_csv}")
+
+    # ── Clean Flash CSV ────────────────────────────────────────────────────────
+    flash_rows, flash_fields = _read(flash_csv)
+    flash_id_col = _find_col(flash_fields, ["file id", "file_id", "FILE_ID", "fileid"])
+
+    if not flash_id_col:
+        log("WARNING: Could not detect file id column in Flash CSV — skipping Flash cleanup.")
+        return pro_csv, flash_csv
+
+    clean_flash = [r for r in flash_rows if (r.get(flash_id_col) or "").strip() not in error_ids]
+    dropped_flash = len(flash_rows) - len(clean_flash)
+    _write(flash_csv, clean_flash, flash_fields)
+    log(f"✓ Flash CSV — removed {dropped_flash} row(s) → {flash_csv}")
+
+    return pro_csv, flash_csv
+
+
 def step_audit(cfg: dict, pro_csv: Path, flash_csv: Path) -> tuple[Path, Path]:
     """Run both audit scripts. Returns (without_products_dir, products_dir)."""
     banner("STEP 3 — Audit: Without-Products (31-03_audit.py)")
@@ -341,6 +422,7 @@ Examples:
     if step in ("all", "extract"):
         flash_json_csv = Path(args.flash_json_csv).resolve() if args.flash_json_csv else None
         pro_csv, flash_csv = step_extract(cfg, flash_json_csv=flash_json_csv)
+        pro_csv, flash_csv = step_clean_errors(pro_csv, flash_csv)
 
     if step in ("all", "audit"):
         # If running standalone, require explicit paths or auto-detect latest
