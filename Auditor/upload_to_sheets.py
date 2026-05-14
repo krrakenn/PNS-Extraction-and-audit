@@ -38,7 +38,7 @@ NON_PROD_TAB = "Non-Prod"
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
-ROOT          = Path(__file__).parent
+ROOT          = Path(__file__).parent.parent   # project root (one level up from Auditor/)
 AUDIT_OUTPUTS = ROOT / "Auditor" / "audit_outputs"
 
 
@@ -56,6 +56,11 @@ def get_credentials() -> Credentials:
             sys.exit(1)
         with open(creds_path, encoding="utf-8") as f:
             creds_dict = json.load(f)
+    
+    # Resilient fix for private_key escaping issues (common in CI/CD and copy-paste)
+    if "private_key" in creds_dict:
+        creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+        
     return Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
 
 
@@ -137,7 +142,7 @@ def upload_to_tab(worksheet: gspread.Worksheet, verdict_rows: list[dict], run_da
     cell_range = f"A{start_row}:D{end_row}"
 
     # Single write — no cell-by-cell iteration
-    worksheet.update(cell_range, values, value_input_option="RAW")
+    worksheet.update(values, cell_range, value_input_option="RAW")
     print(f"  ✓ [{worksheet.title}] wrote {len(verdict_rows)} verdicts at rows {start_row}–{start_row + len(verdict_rows) - 1}")
 
 
