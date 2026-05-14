@@ -33,16 +33,15 @@ from pathlib import Path
 from dotenv import load_dotenv
 from langfuse import Langfuse
 
-# Load .env from csv_batch_tool
-load_dotenv(ROOT / "csv_batch_tool" / ".env")
-
-
 # ─── Resolve paths relative to this script ───────────────────────────────────
 ROOT = Path(__file__).parent.resolve()
 CONFIG_FILE = ROOT / "pipeline_config.json"
 PROMPTS_FILE = ROOT / "prompts_config.json"
 CSV_BATCH_TOOL = ROOT / "csv_batch_tool"
 AUDITOR = ROOT / "Auditor"
+
+# Load .env from csv_batch_tool
+load_dotenv(ROOT / "csv_batch_tool" / ".env")
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
