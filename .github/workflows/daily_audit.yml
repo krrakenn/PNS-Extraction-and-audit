@@ -54,6 +54,7 @@ jobs:
         LANGFUSE_PUBLIC_KEY: ${{ secrets.EXTRACT_LANGFUSE_PUBLIC_KEY }}
         LANGFUSE_SECRET_KEY: ${{ secrets.EXTRACT_LANGFUSE_SECRET_KEY }}
         LANGFUSE_BASE_URL: "https://cloud.langfuse.com"
+        PNS_INPUT_CSV: "csv_batch_tool/input/daily_input.csv"
 
     # ── Step 4: Run Audits comparing Pro output vs normalized Flash ─────────────
     - name: Run Audits
