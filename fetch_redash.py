@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 
 REDASH_URL = "https://redash.intermesh.net"
-REDASH_API_KEY = os.environ.get("REDASH_API_KEY", "QBP8PHGjiX0DZR4YV0rMed9shXs8b3fAwSmySNSG")
+REDASH_API_KEY = os.environ.get("REDASH_API_KEY", "")
 DATA_SOURCE_ID = 14
 REDASH_HEADERS = {"Authorization": f"Key {REDASH_API_KEY}"}
 
