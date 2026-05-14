@@ -11,3 +11,6 @@ csv_batch_tool/input/
 *.csv
 !pipeline_config.json
 !prompts_config.json
+
+# Google Service Account (local dev only — GitHub Actions uses GOOGLE_CREDENTIALS_JSON secret)
+google_credentials.json
