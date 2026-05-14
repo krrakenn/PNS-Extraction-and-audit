@@ -44,7 +44,7 @@ GROUP BY
     fel.created_at
 
 ORDER BY fel.created_at DESC
-LIMIT 100;
+LIMIT 10;
 """
 
 
