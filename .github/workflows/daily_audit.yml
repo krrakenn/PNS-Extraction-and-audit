@@ -8,7 +8,7 @@ on:
 jobs:
   run-daily-audit:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v3
@@ -27,51 +27,54 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r Auditor/requirements.txt
-        pip install python-dotenv langfuse
+        pip install python-dotenv langfuse pandas requests
 
-    - name: Fetch Daily Calls from Kibana
-      run: |
-        echo "Fetching Kibana URLs..."
-        # ----------------------------------------------------------------------------------
-        # TODO: Add your script here to fetch audio URLs from Kibana
-        # Save the file to: csv_batch_tool/input/Untitled discover search.csv
-        # ----------------------------------------------------------------------------------
-        mkdir -p csv_batch_tool/input/
-        touch "csv_batch_tool/input/Untitled discover search.csv"
-
+    # ── Step 1: Pull today's 100 calls from Redash ─────────────────────────────
+    # Outputs: csv_batch_tool/input/daily_input.csv
+    # Columns: FILE_ID, llm_extracted_json, RECORDING_URL, RECEIVER_GLID, SENDER_GLID
     - name: Fetch Daily Calls from Redash
-      run: |
-        pip install pandas requests
-        python fetch_redash.py
+      run: python fetch_redash.py
       env:
         REDASH_API_KEY: ${{ secrets.REDASH_API_KEY }}
 
-    - name: Run Extraction
+    # ── Step 2: Normalize Flash JSON from Redash into auditor-ready CSV ────────
+    # Uses llm_extracted_json column from daily_input.csv
+    - name: Normalize Flash Data
       run: |
-        python run_pipeline.py --step extract --flash-json-csv csv_batch_tool/input/daily_redash.csv
+        python Auditor/import_flash_data.py \
+          --source-csv csv_batch_tool/input/daily_input.csv \
+          --output-csv csv_batch_tool/input/daily_flash_normalized.csv
+
+    # ── Step 3: Run Go extraction (Gemini 2.5 Pro) on audio URLs ───────────────
+    # Uses RECORDING_URL, SENDER_GLID, RECEIVER_GLID from daily_input.csv
+    - name: Run Extraction (Pro)
+      run: python run_pipeline.py --step extract
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         LANGFUSE_PUBLIC_KEY: ${{ secrets.EXTRACT_LANGFUSE_PUBLIC_KEY }}
         LANGFUSE_SECRET_KEY: ${{ secrets.EXTRACT_LANGFUSE_SECRET_KEY }}
         LANGFUSE_BASE_URL: "https://cloud.langfuse.com"
 
+    # ── Step 4: Run Audits comparing Pro output vs normalized Flash ─────────────
     - name: Run Audits
       run: |
-        python run_pipeline.py --step audit
+        python run_pipeline.py --step audit \
+          --flash-csv csv_batch_tool/input/daily_flash_normalized.csv
       env:
         IMLLM_API_KEY: ${{ secrets.IMLLM_API_KEY }}
         LANGFUSE_PUBLIC_KEY: ${{ secrets.AUDIT_LANGFUSE_PUBLIC_KEY }}
         LANGFUSE_SECRET_KEY: ${{ secrets.AUDIT_LANGFUSE_SECRET_KEY }}
         LANGFUSE_HOST: "https://langfuse.intermesh.net"
 
+    # ── Step 5: Collate and analyze results ────────────────────────────────────
     - name: Collate and Analyze
       run: |
         python run_pipeline.py --step collate
         python run_pipeline.py --step analyze
 
+    # ── Step 6: Upload summary to Google Sheets ────────────────────────────────
     - name: Upload Results to Google Sheets
-      run: |
-        python Auditor/upload_to_sheets.py
+      run: python Auditor/upload_to_sheets.py
       env:
         GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
         GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
