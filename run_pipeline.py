@@ -256,7 +256,11 @@ def step_clean_errors(pro_csv: Path, flash_csv: Path) -> tuple[Path, Path]:
     _write(pro_csv, clean_pro, pro_fields)
     log(f"✓ Pro CSV  — removed {dropped_pro} row(s) → {pro_csv}")
 
-    # ── Clean Flash CSV ────────────────────────────────────────────────────────
+    # ── Clean Flash CSV (only if a Flash CSV path was provided) ───────────────
+    if flash_csv is None:
+        log("  Flash CSV is None (--skip-flash mode) — skipping Flash cleanup.")
+        return pro_csv, flash_csv
+
     flash_rows, flash_fields = _read(flash_csv)
     flash_id_col = _find_col(flash_fields, ["file id", "file_id", "FILE_ID", "fileid"])
 
