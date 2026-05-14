@@ -133,8 +133,11 @@ def step_filter(cfg: dict) -> None:
     log(f"✓ Filtered CSV written → {output_path}")
 
 
-def step_extract(cfg: dict, pro_model: str = None, flash_model: str = None, flash_json_csv: Path = None) -> tuple[Path, Path]:
-    """Run Go extraction. Returns (pro_output_path, flash_output_path)."""
+def step_extract(cfg: dict, pro_model: str = None, flash_model: str = None, flash_json_csv: Path = None, skip_flash: bool = False) -> tuple[Path, Path]:
+    """Run Go extraction. Returns (pro_output_path, flash_output_path).
+    
+    Pass skip_flash=True to run only the Pro model (when Flash data comes from Redash).
+    """
     banner("STEP 2 — LLM Extraction")
     prompts = load_prompts()
     write_prompts_override(prompts)
@@ -155,19 +158,18 @@ def step_extract(cfg: dict, pro_model: str = None, flash_model: str = None, flas
         sys.exit(1)
     log(f"✓ PRO extraction complete → {pro_output_path}")
 
-    # Handle FLASH (either run model or import provided)
+    # Handle FLASH (either skip, run model, or import provided)
     flash_output_path: Path | None = None
-    if flash_json_csv:
+    if skip_flash:
+        banner("STEP 2b — Skipping Flash extraction (using Redash-normalized CSV)")
+        log("  --skip-flash set: Flash Go extraction skipped.")
+    elif flash_json_csv:
         banner("STEP 2b — Importing Provided Flash Data")
         flash_output_path = extraction_base / "imported_flash" / time.strftime("%Y%m%d_%H%M%S") / "output.csv"
         flash_output_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        source_csv = CSV_BATCH_TOOL / "input" / "filtered_output_20-04.csv"
-        
         run(
             [sys.executable, str(AUDITOR / "import_flash_data.py"),
-             "--flash-json-csv", str(flash_json_csv),
-             "--source-csv", str(source_csv),
+             "--source-csv", str(flash_json_csv),
              "--output-csv", str(flash_output_path)],
             cwd=ROOT
         )
@@ -242,10 +244,11 @@ def step_clean_errors(pro_csv: Path, flash_csv: Path) -> tuple[Path, Path]:
                 error_ids.add(fid)
 
     if not error_ids:
-        log("✓ No ERROR rows found — both CSVs are clean.")
+        log("✓ No ERROR rows found — Pro CSV is clean.")
         return pro_csv, flash_csv
 
-    log(f"Found {len(error_ids)} ERROR file ID(s): {sorted(error_ids)}")
+    log(f"⚠ Found {len(error_ids)} ERROR row(s) in Pro CSV — file IDs: {sorted(error_ids)}")
+    log(f"  These rows will be removed from both CSVs before auditing.")
 
     # ── Clean Pro CSV ──────────────────────────────────────────────────────────
     clean_pro = [r for r in pro_rows if (r.get(pro_id_col) or "").strip() not in error_ids]
@@ -393,6 +396,7 @@ Examples:
     parser.add_argument("--pro-csv", help="Path to pro model output.csv (for --step audit)")
     parser.add_argument("--flash-csv", help="Path to flash model output.csv (for --step audit)")
     parser.add_argument("--flash-json-csv", help="Path to user-provided Flash JSON CSV (to skip Flash extraction)")
+    parser.add_argument("--skip-flash", action="store_true", help="Skip Flash Go extraction (use when Flash data comes from Redash via import_flash_data.py)")
     parser.add_argument("--audit-dir-noproducts", help="Path to without_products_audit dir (for --step collate)")
     parser.add_argument("--audit-dir-products", help="Path to products audit dir (for --step collate)")
     parser.add_argument("--collated-noproducts", help="Path to without-products audit_checks_collated.csv (for --step analyze)")
@@ -420,7 +424,7 @@ Examples:
 
     if step in ("all", "extract"):
         flash_json_csv = Path(args.flash_json_csv).resolve() if args.flash_json_csv else None
-        pro_csv, flash_csv = step_extract(cfg, flash_json_csv=flash_json_csv)
+        pro_csv, flash_csv = step_extract(cfg, flash_json_csv=flash_json_csv, skip_flash=args.skip_flash)
         pro_csv, flash_csv = step_clean_errors(pro_csv, flash_csv)
 
     if step in ("all", "audit"):

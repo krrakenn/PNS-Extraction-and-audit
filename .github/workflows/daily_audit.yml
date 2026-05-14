@@ -48,7 +48,7 @@ jobs:
     # ── Step 3: Run Go extraction (Gemini 2.5 Pro) on audio URLs ───────────────
     # Uses RECORDING_URL, SENDER_GLID, RECEIVER_GLID from daily_input.csv
     - name: Run Extraction (Pro)
-      run: python run_pipeline.py --step extract
+      run: python run_pipeline.py --step extract --skip-flash
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         LANGFUSE_PUBLIC_KEY: ${{ secrets.EXTRACT_LANGFUSE_PUBLIC_KEY }}
