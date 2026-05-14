@@ -163,6 +163,8 @@ def step_extract(cfg: dict, pro_model: str = None, flash_model: str = None, flas
     if skip_flash:
         banner("STEP 2b — Skipping Flash extraction (using Redash-normalized CSV)")
         log("  --skip-flash set: Flash Go extraction skipped.")
+        # Fix: explicitly set the path so step_clean_errors can clean it!
+        flash_output_path = CSV_BATCH_TOOL / "input" / "daily_flash_normalized.csv"
     elif flash_json_csv:
         banner("STEP 2b — Importing Provided Flash Data")
         flash_output_path = extraction_base / "imported_flash" / time.strftime("%Y%m%d_%H%M%S") / "output.csv"
@@ -448,12 +450,8 @@ Examples:
             if args.flash_csv:
                 flash_csv = Path(args.flash_csv).resolve()
             else:
-                extraction_base = CSV_BATCH_TOOL / cfg["extraction_output_dir"]
-                flash_csv = find_latest_output(extraction_base, cfg["flash_model"])
-                if not flash_csv:
-                    log("ERROR: --flash-csv not provided and no extraction output found. Run extract first.")
-                    sys.exit(1)
-                log(f"Auto-detected flash CSV: {flash_csv}")
+                # Default to the daily normalized Flash data
+                flash_csv = CSV_BATCH_TOOL / "input" / "daily_flash_normalized.csv"
 
         noproducts_dir, products_dir = step_audit(cfg, pro_csv, flash_csv)
 
