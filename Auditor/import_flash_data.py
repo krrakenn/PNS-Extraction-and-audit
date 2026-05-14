@@ -63,6 +63,7 @@ def normalize_json(raw_json: str) -> str:
         return raw_json
 
 def main():
+    # v2: single-source mode — only --source-csv and --output-csv required
     parser = argparse.ArgumentParser(description="Import and normalize Redash JSON data for PNS Auditor.")
     parser.add_argument("--source-csv", required=True, help="Path to the Redash CSV (daily_input.csv)")
     parser.add_argument("--output-csv", required=True, help="Path to output standardized CSV")
